@@ -80,7 +80,9 @@ h1 { margin: .8vh 0 3vh; font-size: 3.6vw; line-height: 1.05; letter-spacing: -.
 .strip { display: grid; grid-template-columns: 12vw 1fr; gap: 2vw; align-items: end; }
 .strip .nm { font-size: 1.8vw; font-weight: 700; padding-bottom: .6vh; }
 .strip .axis { position: relative; height: 11vh; border-bottom: 2px solid var(--line-strong); }
-.strip .dot { position: absolute; width: 1vw; height: 1vw; border-radius: 50%; background: var(--text); opacity: .22; transform: translateX(-50%); transition: bottom .5s; }
+/* Hasta 9 puntos apilados por valor, siempre dentro de la altura del eje */
+.strip .axis { --ds: min(1vw, 1.2vh); }
+.strip .dot { position: absolute; bottom: calc(var(--k, 0) * (100% - var(--ds)) / 9); width: var(--ds); height: var(--ds); border-radius: 50%; background: var(--text); opacity: .22; transform: translateX(-50%); transition: bottom .5s; }
 .strip .dot.new { animation: drop .6s cubic-bezier(.2,.8,.2,1); }
 @keyframes drop { from { transform: translate(-50%, -6vh); opacity: 0; } to { transform: translateX(-50%); } }
 .strip .mean { position: absolute; bottom: 0; width: .45vw; height: 10vh; background: var(--accent); transform: translateX(-50%); border-radius: .3vw; transition: left .8s cubic-bezier(.2,.8,.2,1), opacity .4s; }
@@ -110,7 +112,8 @@ h1 { margin: .8vh 0 3vh; font-size: 3.6vw; line-height: 1.05; letter-spacing: -.
 /* ——— Modo incrustado (complemento de PowerPoint o ?embed) ——— */
 body.embed { background: #fff; }
 body.embed header.top, body.embed .fs { display: none !important; }
-body.embed #stage { padding: 2vh 2vw; animation: none; }
+body.embed #stage { padding: 2vh 0; animation: none; } /* sin margen lateral: el hueco ya va alineado con los márgenes de la diapositiva */
+body.embed .pop { right: 0; top: auto; bottom: 100%; }
 body.embed #stage > .kick, body.embed #stage > h1 { display: none; }
 body.embed .foot { margin-top: 1vh; }
 body.embed .vbars { align-content: center; gap: 3vh; }
@@ -124,11 +127,30 @@ body.embed .vbars.compact .vbar .track { height: 8vh; }
 body.embed .vbars.compact .vbar .pc { font-size: 2.6vw; }
 body.embed .counter.sm b { font-size: 3vw; }
 body.embed .counter.sm span { font-size: 1.4vw; }
-body.embed .heat { grid-template-columns: 34vw repeat(5, minmax(0, 1fr)); }
-body.embed .heat .case { font-size: 1.35vw; }
+body.embed .heat { grid-template-columns: 41vw repeat(5, minmax(0, 1fr)); }
+body.embed .heat .case { font-size: 1.55vw; line-height: 1.25; }
 body.embed .heat .h { font-size: 1.1vw; }
-body.embed .heat .cell { min-height: 14vh; font-size: 2.2vw; }
+body.embed .heat .cell { min-height: 12vh; font-size: 2.2vw; }
 body.embed .strip .nm { font-size: 2.2vw; }
+body.embed .strips { gap: 4vh; }
+body.embed .strip .axis { height: 14vh; }
+body.embed .strip .mean::after { font-size: 2.2vw; }
+body.embed .strip .bm::after { font-size: 1.5vw; }
+body.embed .axislab, body.embed .legend { font-size: 1.7vw; }
+body.embed .legend i { width: 1.4vw; height: 1.4vw; }
+body.embed .foot .sub { display: none; }
+/* Hueco ancho y bajo (debates 5 y final): una tarjeta por opción, en fila, como en la diapositiva */
+@media (min-aspect-ratio: 4/1) {
+  body.embed #stage { padding: 2vh 0 0; }
+  body.embed .vbars:not(.compact) { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1.2vw; align-content: stretch; }
+  body.embed .vbars:not(.compact) .vbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1fr auto; gap: 3vh 1vw; align-items: center; background: var(--surface); border-radius: 1vw; padding: 7vh 1.4vw 6vh; }
+  body.embed .vbars:not(.compact) .vbar .lab { grid-column: 1 / -1; align-self: start; font-size: 12vh; }
+  body.embed .vbars:not(.compact) .vbar .track { height: 6vh; background: #fff; }
+  body.embed .vbars:not(.compact) .vbar .pc { font-size: 26vh; line-height: .9; }
+  body.embed .foot { margin-top: 1.5vh; }
+  body.embed .counter.sm b { font-size: 12vh; }
+  body.embed .counter.sm span { font-size: 8vh; }
+}
 body.embed .embed-count { height: 100%; display: flex; flex-direction: column; justify-content: center; }
 body.embed .embed-count .counter b { font-size: 13vw; }
 body.embed .embed-count .counter span { font-size: 3vw; }

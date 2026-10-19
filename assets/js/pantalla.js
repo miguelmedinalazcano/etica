@@ -168,7 +168,7 @@ function update() {
         const stack = Math.min(c, 9);
         for (let k = 0; k < stack; k++) {
           const key = val + ':' + k; keep.add(key);
-          if (!have[key]) { const d = document.createElement('span'); d.className = 'dot new'; d.dataset.k = key; d.style.left = (val * 10) + '%'; d.style.bottom = (0.6 + k * 1.15) + 'vw'; dots.appendChild(d); }
+          if (!have[key]) { const d = document.createElement('span'); d.className = 'dot new'; d.dataset.k = key; d.style.left = (val * 10) + '%'; d.style.setProperty('--k', k); dots.appendChild(d); }
         }
       }
       for (const [key, d] of Object.entries(have)) if (!keep.has(key)) d.remove();
