@@ -101,7 +101,7 @@ h1 { margin: .8vh 0 3vh; font-size: 3.6vw; line-height: 1.05; letter-spacing: -.
 .ring .rl { font-size: 1.5vw; font-weight: 600; text-align: center; }
 .ring .rs { font-size: 1.1vw; color: var(--text-2); text-align: center; }
 
-.fs { position: fixed; left: 1.4vw; bottom: 1.4vh; font: inherit; font-size: 12px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: #fff; color: var(--text-2); cursor: pointer; opacity: .7; }
+.fs { font: inherit; font-size: 12px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: #fff; color: var(--text-2); cursor: pointer; opacity: .7; }
 .fs:hover { opacity: 1; }
 :fullscreen .fs { display: none; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
