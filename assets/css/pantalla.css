@@ -114,6 +114,9 @@ body.embed { background: #fff; }
 body.embed header.top, body.embed .fs { display: none !important; }
 body.embed #stage { padding: 2vh 0; animation: none; } /* sin margen lateral: el hueco ya va alineado con los márgenes de la diapositiva */
 body.embed .pop { right: 0; top: auto; bottom: 100%; }
+/* Dentro del PowerPoint «Primera plana»: esquinas rectas y recuadros de filete, como las slides */
+body.embed .vbar .track, body.embed .vbar .fill, body.embed .heat .cell, body.embed .stat, body.embed .progress, body.embed .progress i { border-radius: 0; }
+body.embed .stat { background: #fff; border: 1px solid var(--text); }
 body.embed #stage > .kick, body.embed #stage > h1 { display: none; }
 body.embed .foot { margin-top: 1vh; }
 body.embed .vbars { align-content: center; gap: 3vh; }
@@ -143,9 +146,9 @@ body.embed .foot .sub { display: none; }
 @media (min-aspect-ratio: 4/1) {
   body.embed #stage { padding: 2vh 0 0; }
   body.embed .vbars:not(.compact) { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1.2vw; align-content: stretch; }
-  body.embed .vbars:not(.compact) .vbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1fr auto; gap: 3vh 1vw; align-items: center; background: var(--surface); border-radius: 1vw; padding: 7vh 1.4vw 6vh; }
+  body.embed .vbars:not(.compact) .vbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1fr auto; gap: 3vh 1vw; align-items: center; background: #fff; border: 1px solid var(--text); border-radius: 0; padding: 7vh 1.4vw 6vh; }
   body.embed .vbars:not(.compact) .vbar .lab { grid-column: 1 / -1; align-self: start; font-size: 12vh; }
-  body.embed .vbars:not(.compact) .vbar .track { height: 6vh; background: #fff; }
+  body.embed .vbars:not(.compact) .vbar .track { height: 6vh; background: var(--surface); }
   body.embed .vbars:not(.compact) .vbar .pc { font-size: 26vh; line-height: .9; }
   body.embed .foot { margin-top: 1.5vh; }
   body.embed .counter.sm b { font-size: 12vh; }

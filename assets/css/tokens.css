@@ -1,16 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap');
 
-/* Tema claro: fondo blanco, texto casi negro y UN solo color de acento.
+/* Tema claro «Primera plana»: fondo blanco, tinta negra y UN solo color de acento (rojo).
    Para cambiar el color de toda la presentación, cambia solo --accent. */
 :root {
-  --accent: #1F45D6;
+  --accent: #C8102E;
   --accent-ink: #FFFFFF;           /* texto sobre el acento */
   --bg: #FFFFFF;
-  --surface: #F4F5F8;
-  --surface-2: #E8EAEF;
-  --text: #111318;
-  --text-2: #565A64;
-  --text-3: #8C909A;
+  --surface: #F3F3F3;
+  --surface-2: #DDDDDD;
+  --text: #111111;
+  --text-2: #444444;
+  --text-3: #888888;
 
   /* Alias que usan los componentes (no tocar) */
   --ink: var(--bg);
@@ -19,8 +19,8 @@
   --paper: var(--text);
   --paper-dim: var(--text-2);
   --paper-faint: var(--text-3);
-  --line: rgba(17, 19, 24, 0.10);
-  --line-strong: rgba(17, 19, 24, 0.22);
+  --line: rgba(17, 17, 17, 0.10);
+  --line-strong: rgba(17, 17, 17, 0.22);
   --rigor: var(--accent);
   --linea: var(--text);
   --warn: var(--accent);
