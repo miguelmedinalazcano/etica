@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ContentApp">
+  <Id>9781e765-d09b-4062-95c6-32491c3880bf</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>La ética del periodismo · ICAI</ProviderName>
+  <DefaultLocale>es-ES</DefaultLocale>
+  <DisplayName DefaultValue="Ética · resultados en directo"/>
+  <Description DefaultValue="Muestra dentro de la diapositiva las votaciones y los resultados en directo de la presentación «La ética del periodismo»."/>
+  <IconUrl DefaultValue="https://miguelmedinalazcano.github.io/etica/addin/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://miguelmedinalazcano.github.io/etica/addin/icon-64.png"/>
+  <SupportUrl DefaultValue="https://miguelmedinalazcano.github.io/etica/"/>
+  <AppDomains>
+    <AppDomain>https://miguelmedinalazcano.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Presentation"/>
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://miguelmedinalazcano.github.io/etica/addin/"/>
+    <RequestedWidth>960</RequestedWidth>
+    <RequestedHeight>400</RequestedHeight>
+  </DefaultSettings>
+  <Permissions>ReadDocument</Permissions>
+  <AllowSnapshot>true</AllowSnapshot>
+</OfficeApp>

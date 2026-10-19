@@ -13,7 +13,12 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const stage = $('#stage');
 const params = new URLSearchParams(location.search);
 if (params.has('demo')) await demoSeed(store);
-const forced = params.get('vista'); // para probar una vista: ?vista=d5
+// Vista fija: ?vista=d5, o la que guarda el complemento de PowerPoint en la diapositiva.
+// Modo incrustado (?embed o complemento): sin cabecera ni título, solo el gráfico en vivo.
+const ADDIN = window.__ADDIN__ || null;
+const EMBED = params.has('embed') || !!ADDIN;
+let forced = params.get('vista') || (ADDIN ? await ADDIN.view : null);
+document.body.classList.toggle('embed', EMBED);
 const studentUrl = (cfg.baseUrl || new URL('../', location.href).href).replace(/\/?$/, '/');
 
 // Qué vista corresponde a cada slide abierta desde la consola.
@@ -62,7 +67,7 @@ store.onSession(() => { for (const k of Object.keys(lastN)) delete lastN[k]; cur
 store.onStatus(st => { status = st; const c = $('[data-conn]'); c.classList.toggle('off', !st.online); c.textContent = st.online ? 'en directo' : 'reconectando…'; });
 
 function pickView() {
-  let v = forced || (state?.screen && state.screen !== 'auto' ? state.screen : null);
+  let v = (forced && forced !== 'auto') ? forced : (state?.screen && state.screen !== 'auto' ? state.screen : null);
   if (!v) { const m = VIEW_BY_SLIDE[state?.slide]; if (m) lastSlideView = m; v = lastSlideView; }
   if (v !== current) { current = v; build(v); }
   update();
@@ -74,6 +79,7 @@ const BUILD = {
     return `<div class="split"><div class="qr big huge" data-qr></div><div><div class="kick">Votación anónima</div><h1>Escanea el código y entra</h1><p class="sub">Sin registro ni datos personales. El móvil cambia solo con cada votación.</p><div class="counter" data-k="presence" style="margin-top:4vh"><b>0</b><span>en la sala</span></div></div></div>`;
   },
   encuesta() {
+    if (EMBED) return `<div class="embed-count"><div class="counter" data-k="survey"><b>0</b><span>han enviado la encuesta</span></div><div class="progress"><i data-prog></i></div><div class="hint" data-of></div></div>`;
     return `<div class="split"><div class="qr big" data-qr></div><div><div class="kick">Encuesta y experimento</div><h1>Antes de empezar: ¿cómo os informáis?</h1><div class="counter" data-k="survey"><b>0</b><span>han enviado la encuesta</span></div><div class="progress"><i data-prog></i></div><div class="hint" data-of></div></div></div>`;
   },
   canales() {
@@ -92,6 +98,7 @@ const BUILD = {
       <div class="foot"><div class="legend"><span><i></i>Media de la clase</span><span><i class="ink"></i>I · C · D: media según dónde se sitúa quien responde</span></div><div class="counter sm" data-k="exp"><b>0</b><span>respuestas</span></div></div>`;
   },
   anunciantes() {
+    if (EMBED) return `<div class="vbars compact" data-anun><div class="vbar" data-r="dnr"><div class="lab">España · DNR 2026</div><div class="track"><div class="fill" style="background:#111318"></div></div><div class="pc"><span>55</span><small>%</small></div></div><div class="vbar lead" data-r="clase"><div class="lab">Esta clase</div><div class="track"><div class="fill"></div></div><div class="pc"><span>—</span><small>%</small></div></div></div>`;
     const ring = (id, label, sub) => `<div class="ring"><svg viewBox="0 0 100 100" role="img" aria-label="${esc(label)}"><circle cx="50" cy="50" r="40" fill="none" stroke="#E8EAEF" stroke-width="10"></circle><circle class="val" data-ring="${id}" cx="50" cy="50" r="40" fill="none" stroke="${id === 'dnr' ? '#111318' : 'var(--accent)'}" stroke-width="10" stroke-dasharray="0 251.3" stroke-linecap="round" transform="rotate(-90 50 50)"></circle><text x="50" y="57" text-anchor="middle" font-family="Sora, sans-serif" font-size="18" font-weight="300" fill="#111318" data-ringv="${id}">—</text></svg><div class="rl">${esc(label)}</div><div class="rs">${esc(sub)}</div></div>`;
     return `<div class="kick">Idea 5 · quien paga</div><h1>¿Influyen los anunciantes en lo que cuenta un medio?</h1><div class="rings">${ring('dnr', 'España', 'Digital News Report 2026')}${ring('clase', 'Esta clase', 'encuesta, «mucho» o «algo»')}</div>`;
   },
@@ -147,7 +154,7 @@ function update() {
     const q = QUESTIONS.d2_casos, a = aggs.d2_casos;
     for (const c of q.cases) {
       const pc = a?.perCase?.[c.id]; const n = pc?.n || 0; const max = n ? Math.max(...pc.counts) : 0;
-      $$(`.cell[data-c="${c.id}"]`, stage).forEach(cell => { const i = Number(cell.dataset.i); const val = pc?.counts?.[i] || 0; const p = pct(val, n); cell.style.setProperty('--p', Math.round(p * 0.9)); cell.textContent = n ? p + ' %' : '·'; cell.classList.toggle('top', n > 0 && val === max && val > 0); cell.classList.toggle('hot', p >= 45); });
+      $$(`.cell[data-c="${c.id}"]`, stage).forEach(cell => { const i = Number(cell.dataset.i); const val = pc?.counts?.[i] || 0; const p = pct(val, n); cell.style.setProperty('--p', Math.round(p * 0.9)); cell.textContent = n ? p + ' %' : '·'; cell.classList.toggle('max', n > 0 && val === max && val > 0); cell.classList.toggle('hot', p >= 45); });
     }
     counterUpdate($('[data-k="casos"]', stage), a?.n || 0);
   }
@@ -174,6 +181,8 @@ function update() {
     const a5 = aggs.q5_anunciantes; const clase = a5?.n ? pct(a5.counts[0] + a5.counts[1], a5.n) : null;
     const setRing = (id, val) => { const c = $(`[data-ring="${id}"]`, stage); if (c) c.setAttribute('stroke-dasharray', `${(val ?? 0) * 2.513} 251.3`); const t = $(`[data-ringv="${id}"]`, stage); if (t) t.textContent = val == null ? '—' : `${val} %`; };
     setRing('dnr', 55); setRing('clase', clase);
+    const box = $('[data-anun]', stage);
+    if (box) { $('[data-r="dnr"] .fill', box).style.width = '55%'; $('[data-r="clase"] .fill', box).style.width = (clase ?? 0) + '%'; countTo($('[data-r="clase"] .pc span', box), clase ?? 0, x => clase == null ? '—' : String(Math.round(x))); }
   }
   if (v === 'd5' || v === 'd_final') { bars(v); counterUpdate($(`[data-k="${v}"]`, stage), aggs[v]?.n || 0); }
 }
@@ -181,4 +190,4 @@ function update() {
 // Pantalla completa con un clic (los navegadores lo exigen así).
 $('#fs').addEventListener('click', () => document.documentElement.requestFullscreen?.().catch(() => {}));
 pickView();
-window.__pantalla = { store, get aggs() { return aggs; } };
+window.__pantalla = { store, get aggs() { return aggs; }, setView(v) { forced = v; current = null; pickView(); } };
