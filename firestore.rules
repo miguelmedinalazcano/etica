@@ -1,0 +1,50 @@
+// Reglas de Firestore para "La ética del periodismo".
+// Sustituye los correos de PRESENTERS por los de los cuatro ponentes (los mismos que en config.js).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isPresenter() {
+      return signedIn() && request.auth.token.email in ['ponente1@example.com', 'ponente2@example.com', 'ponente3@example.com', 'ponente4@example.com'];
+    }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Estado de la sesión: todos leen, solo los ponentes escriben.
+    match /sesion/{doc} {
+      allow read: if signedIn();
+      allow write: if isPresenter();
+    }
+    // Agregados: todos leen, solo la presentación (ponente) escribe.
+    match /agg/{qid} {
+      allow read: if signedIn();
+      allow write: if isPresenter();
+    }
+    // Respuestas individuales: solo las leen los ponentes; cada persona escribe la suya.
+    match /responses/{qid}/items/{uid} {
+      allow read: if isPresenter();
+      allow create, update: if isSelf(uid) && request.resource.data.keys().hasOnly(['value', 'role', 'lens', 't']);
+      allow delete: if isPresenter();
+    }
+    // Muro: todos leen; crear con límite de 200 caracteres; votar solo sobre el propio uid; moderar solo ponentes.
+    match /wall/{post} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string && request.resource.data.text.size() <= 200
+        && request.resource.data.hidden == false;
+      allow update: if isPresenter()
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+            && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid]));
+      allow delete: if isPresenter();
+    }
+    // Usuarios (rol, lente, última conexión): cada uno el suyo; los ponentes leen todos.
+    match /users/{uid} {
+      allow read: if isPresenter() || isSelf(uid);
+      allow write: if isSelf(uid) || isPresenter();
+    }
+    // Reacciones efímeras.
+    match /reactions/{uid} {
+      allow read: if isPresenter();
+      allow write: if isSelf(uid) || isPresenter();
+    }
+  }
+}
