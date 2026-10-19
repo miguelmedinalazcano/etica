@@ -182,6 +182,13 @@ if (STRICT) {
 }
 // Votaciones que se abren en los móviles (accesos directos de la consola).
 export const POLL_SLIDES = SLIDES.filter(s => ['survey', 'question', 'debate'].includes(s.phone.kind)).map(s => s.n);
+// Slides que tienen vista en la pantalla de resultados (votaciones y resultados de la encuesta).
+export const SCREEN_SLIDES = [...new Set([...POLL_SLIDES, 3, 15, 17])].sort((a, b) => a - b);
+export const SCREEN_VIEWS = [
+  { id: 'auto', label: 'Automático' }, { id: 'qr', label: 'QR para entrar' }, { id: 'encuesta', label: 'Encuesta' },
+  { id: 'canales', label: 'Así os informáis' }, { id: 'casos', label: 'Casos A–D' }, { id: 'experimento', label: 'Experimento' },
+  { id: 'anunciantes', label: 'Anunciantes' }, { id: 'd5', label: 'Debate 5' }, { id: 'd_final', label: 'Debate final' },
+];
 
 export const SLIDE_BY_N = Object.fromEntries(SLIDES.map(s => [s.n, s]));
 

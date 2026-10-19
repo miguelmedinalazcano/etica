@@ -1,5 +1,5 @@
 // Consola de ponente: guion de la slide actual, estado del público, un botón grande y las herramientas plegadas.
-import { QUESTIONS, SLIDES, SLIDE_BY_N, ROLES, LENSES, SURVEY_IDS, PRESENTERS, TOTAL_SECONDS, POLL_SLIDES, STRICT } from './questions.js';
+import { QUESTIONS, SLIDES, SLIDE_BY_N, ROLES, LENSES, SURVEY_IDS, PRESENTERS, TOTAL_SECONDS, POLL_SLIDES, STRICT, SCREEN_SLIDES, SCREEN_VIEWS } from './questions.js';
 import { startAggregator } from './aggregator.js';
 import { createStore, wallSort } from './store.js';
 import { demoSeed } from './demo.js';
@@ -91,10 +91,11 @@ function build(s) {
       <ol class="script">${(s.script || []).map((x, i) => `<li data-step="${i}" class="${doneSteps[s.n + ':' + i] ? 'done' : ''}">${esc(x)}</li>`).join('')}</ol>
     </div>
     <div class="nav"><button class="btn" data-cmd="prev">◀</button><button class="btn primary" data-cmd="next"><span>Siguiente ▶</span><small data-nextlabel></small></button></div>
-    <div class="polls"><div class="sec-t">Votaciones en el móvil</div><div class="pollrow">${POLL_SLIDES.map(n => `<button class="btn sm ${n === s.n ? 'cur' : ''}" data-poll="${n}"><b>${n}</b> ${esc(SLIDE_BY_N[n].section)}</button>`).join('')}<button class="btn sm" data-poll="1">Espera</button></div></div>
+    <div class="polls"><div class="sec-t">Votaciones y resultados · móviles y pantalla</div><div class="pollrow">${SCREEN_SLIDES.map(n => `<button class="btn sm ${n === s.n ? 'cur' : ''}" data-poll="${n}"><b>${n}</b> ${esc(POLL_SLIDES.includes(n) ? SLIDE_BY_N[n].section : 'Resultados')}<small>${POLL_SLIDES.includes(n) ? 'vota' : esc(SLIDE_BY_N[n].title.slice(0, 22))}</small></button>`).join('')}<button class="btn sm" data-poll="1">Espera<small>QR</small></button></div></div>
     <div class="after" data-after></div>
     ${qids.length ? `<details><summary>Votación</summary><div class="body q">` + qids.slice(0, 1).map(q => `<div data-qbox="${q}"><div class="st"><span data-n>0 respuestas</span><b data-open></b></div><div class="row2" style="margin-top:8px"><button class="btn" data-close="${q}">Cerrar votación</button><button class="btn" data-cmd="timer">⏱ Reiniciar cuenta atrás</button></div><div class="row2" style="margin-top:8px"><button class="btn warn sm" data-sim="${q}">Simular 30 respuestas</button><button class="btn danger sm" data-clear="${q}">Borrar respuestas</button></div></div>`).join('') + `</div></details>` : ''}
     ${s.phone.kind === 'debate' ? `<details open><summary>Muro <span data-wallcount></span></summary><div class="body"><div class="row2"><button class="btn sm" data-wallvis>Ocultar muro</button><button class="btn sm" data-unpin>Quitar destacado</button></div><div class="posts" data-posts></div><div class="row2"><button class="btn warn sm" data-simwall>Simular argumentos</button><button class="btn danger sm" data-wallclear>Vaciar muro</button></div></div></details>` : ''}
+    <details><summary>Pantalla de resultados</summary><div class="body"><p class="note">Abre <b>${esc(new URL('../pantalla/', location.href).href.replace(/^https?:\/\//, ''))}</b> en otro ordenador, una tele o un segundo proyector. En «Automático» sigue lo que abras arriba; aquí puedes fijar otra vista.</p><div class="pollrow">${SCREEN_VIEWS.map(v => `<button class="btn sm" data-screen="${v.id}">${esc(v.label)}</button>`).join('')}</div></div></details>
     <details><summary>Ir a una slide</summary><div class="body"><div class="slides">${SLIDES.map(x => `<button data-goto="${x.n}" class="${x.n === s.n ? 'cur' : ''}"><b>${String(x.n).padStart(2, '0')}</b><span>${esc(x.title)}</span><span>${['debate', 'question', 'survey'].includes(x.phone.kind) ? `<span class="k">${x.phone.kind === 'debate' ? 'debate' : 'voto'}</span> ` : ''}<span class="w">${esc(x.who || '')} · ${mmss(x.t)}</span></span></button>`).join('')}</div></div></details>
     <details><summary>Sesión</summary><div class="body"><div class="row2"><button class="btn" data-startclock>Reiniciar reloj</button><a class="btn" style="text-align:center;text-decoration:none;line-height:22px" href="../" target="_blank">Abrir presentación</a></div><button class="btn danger" data-resetall>Preparar sesión nueva (borra todo)</button>${store.mode === 'mqtt' ? `<button class="btn sm" data-forget>Olvidar la clave en este móvil</button>` : ''}<p class="note">Solo pulsa quien habla. El portátil solo muestra la presentación. Toca un paso del guion para marcarlo como hecho.</p></div></details>`;
   renderAfter(s, next);
@@ -105,6 +106,7 @@ function renderAfter(s, next) {
 }
 
 function renderSoft() {
+  $$('[data-screen]').forEach(b => b.classList.toggle('cur', (state?.screen || 'auto') === b.dataset.screen));
   const ml = $('[data-modelabel]');
   if (ml) {
     if (store.mode === 'local') { ml.textContent = 'modo local'; ml.className = 'mode local'; }
@@ -176,7 +178,8 @@ app.addEventListener('click', async e => {
     if (n >= 2 && !state.startedAt) patch.startedAt = Date.now();
     await store.setState(patch); return;
   }
-  if (d.poll) { const n = Number(d.poll); const ns = SLIDE_BY_N[n]; const patch = { slide: n }; if (ns.timer) patch.timerEnd = Date.now() + ns.timer * 1000; if (n >= 2 && !state.startedAt) patch.startedAt = Date.now(); await store.setState(patch); return; }
+  if (d.screen) { await store.setState({ screen: d.screen }); return; }
+  if (d.poll) { const n = Number(d.poll); const ns = SLIDE_BY_N[n]; const patch = { slide: n }; if (state.screen && state.screen !== 'auto') patch.screen = 'auto'; if (ns.timer) patch.timerEnd = Date.now() + ns.timer * 1000; if (n >= 2 && !state.startedAt) patch.startedAt = Date.now(); await store.setState(patch); return; }
   if (d.goto) { const n = Number(d.goto); const ns = SLIDE_BY_N[n]; const patch = { slide: n }; if (!deckPresent() && ns.timer) patch.timerEnd = Date.now() + ns.timer * 1000; await store.setState(patch); return; }
   if (b.hasAttribute('data-start') || b.hasAttribute('data-startclock')) { await store.setState({ startedAt: Date.now() }); return; }
   if (d.close) { const closed = { ...(state.closed || {}) }; closed[d.close] = !closed[d.close]; await store.setState({ closed }); }

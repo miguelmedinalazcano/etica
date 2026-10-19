@@ -130,3 +130,10 @@ input[type=range] { accent-color: var(--accent); }
 .timerbar { background: var(--accent); }
 .reacts button { background: #fff; }
 .reacts[hidden], .role[hidden] { display: none !important; }
+
+/* Enviar voto */
+.send { display: grid; gap: 8px; margin-top: 4px; }
+.send .btn.done, .btn.done { background: #fff; color: var(--accent); border: 1.5px solid var(--accent); opacity: 1; }
+.btn:disabled:not(.done) { opacity: .45; }
+.anon { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-2); text-align: center; }
+.sent-ok { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--accent); }

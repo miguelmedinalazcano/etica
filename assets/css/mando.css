@@ -87,3 +87,6 @@ details .body { padding: 0 0 14px; display: grid; gap: 8px; }
 .pollrow .btn.cur { background: var(--accent); color: #fff; border-color: var(--accent); }
 .pollrow .btn.cur b { color: #fff; }
 .sec-t { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--text-2); font-weight: 700; }
+
+.pollrow .btn small { display: block; font-size: 10px; font-weight: 500; color: var(--text-2); margin-top: 2px; }
+.pollrow .btn.cur small { color: rgba(255,255,255,.8); }

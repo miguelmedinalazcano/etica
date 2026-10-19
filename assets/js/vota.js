@@ -26,10 +26,25 @@ function paintRole() { const r = ROLES.find(r => r.id === me.role); roleEl.textC
 paintRole();
 
 // Respuestas propias, guardadas por sesión (un ensayo no contamina la sesión real).
-let mine = load('mine_' + (store.session || 'none'), {});
-store.onSession(sess => { mine = load('mine_' + (sess || 'none'), {}); view.key = null; view.idx = null; render(); });
+// draft: lo que el alumno ha marcado; mine: lo que ya ha ENVIADO con el botón.
+const sk = () => store.session || 'none';
+let mine = load('mine_' + sk(), {});
+let draft = load('draft_' + sk(), {});
+store.onSession(sess => { mine = load('mine_' + (sess || 'none'), {}); draft = load('draft_' + (sess || 'none'), {}); view.key = null; view.idx = null; render(); });
+function setDraft(qid, v) { draft[qid] = v; save('draft_' + sk(), draft); }
+const valueOf = qid => (draft[qid] !== undefined ? draft[qid] : mine[qid]);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function complete(qid, v) {
+  const q = QUESTIONS[qid];
+  if (v === undefined) return false;
+  if (v === null) return !!q.optional;
+  if (q.type === 'cases') return q.cases.every(c => Number.isInteger(v?.[c.id]));
+  if (q.type === 'rank') return Array.isArray(v) && v.length === q.items.length;
+  return true;
+}
 async function answer(qid, value) {
-  mine[qid] = value; save('mine_' + (store.session || 'none'), mine);
+  mine[qid] = value; save('mine_' + sk(), mine);
+  if (value === null) return; // «prefiero no decirlo»: no se envía nada
   await store.submit(qid, value, { role: me.role, lens: me.lens || null });
   const q = QUESTIONS[qid];
   if (q.saveAs === 'lens') { me.lens = LENSES[value].id; save('me', me); await store.setUser({ lens: me.lens }); }
@@ -56,7 +71,7 @@ store.onState(st => { state = forcedSlide ? { ...st, slide: forcedSlide } : st; 
 function currentSlide() { return SLIDE_BY_N[state?.slide || 1]; }
 function isOpen(s, qid) { return state && state.slide === s.n && !(state.closed && state.closed[qid]); }
 const surveyDone = () => SURVEY_IDS.every(q => mine[q] !== undefined || (QUESTIONS[q].optional && mine[q] === null));
-const surveyStarted = () => SURVEY_IDS.some(q => mine[q] !== undefined);
+const surveyStarted = () => SURVEY_IDS.some(q => mine[q] !== undefined || draft[q] !== undefined);
 
 let waitedSince = Date.now(), waitTimer = null;
 function render() {
@@ -124,37 +139,68 @@ function buildThanks() {
     <div class="card"><div class="lab">Agradecimiento</div><p class="sub" style="margin:0">A COPE y a su director de programación y contenidos informativos.</p></div>`;
 }
 
-// ——— Encuesta por pasos ———
+// ——— Encuesta por pasos: se marca todo y se envía al final ———
 function buildSurvey(s, phone) {
   const qids = phone.qids;
-  const firstPending = qids.findIndex(q => mine[q] === undefined);
-  if (view.idx == null || view.idx >= qids.length) view.idx = firstPending === -1 ? qids.length : firstPending;
+  if (view.idx == null || view.idx > qids.length) {
+    if (qids.every(q => mine[q] !== undefined) && qids.every(q => draft[q] === undefined || same(draft[q], mine[q]))) view.idx = qids.length;
+    else { const first = qids.findIndex(q => !complete(q, valueOf(q))); view.idx = first === -1 ? qids.length - 1 : first; }
+  }
   main.innerHTML = `<div class="progress">${qids.map((q, i) => `<i class="${i < view.idx ? 'done' : ''}"></i>`).join('')}</div>${timerBar()}<div data-step style="flex:1;display:flex;flex-direction:column;gap:16px"></div>`;
   renderSurveyStep(s, qids);
 }
+function surveyQids() { const s = currentSlide(); return (view.forceSurvey && s.phone.kind !== 'survey') ? SURVEY_IDS : s.phone.qids; }
 function renderSurveyStep(s, qids) {
   const box = $('[data-step]', main); if (!box) return;
+  $$('.progress i', main).forEach((i, k) => i.classList.toggle('done', k < view.idx));
   if (view.idx >= qids.length) {
     view.forceSurvey = false;
-    box.innerHTML = `${header(s.phone.title || 'Encuesta', 'Ya está. Gracias.', 'Verás tus respuestas frente a las de la clase en la pantalla y aquí.')}<div class="saved">Guardado ✓</div><button class="btn ghost" data-act="review">Revisar mis respuestas</button>`;
-    $$('.progress i', main).forEach(i => i.classList.add('done'));
+    box.innerHTML = `${header(s.phone.title || 'Encuesta', 'Respuestas enviadas', 'Gracias. Los resultados se verán en directo en la pantalla.')}<div class="sent-ok">${lockIcon()} Enviadas de forma anónima</div><button class="btn ghost" data-act="review">Revisar o cambiar mis respuestas</button>`;
     return;
   }
   const qid = qids[view.idx], q = QUESTIONS[qid];
+  const last = view.idx === qids.length - 1;
   const group = q.group === 'experimento' ? 'Experimento' : (s.phone.title || 'Encuesta');
   box.innerHTML = `${header(`${group} · ${view.idx + 1} / ${qids.length}`, esc(q.title), q.sub)}<div data-widget></div>
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:auto"><button class="btn ghost" data-act="back" ${view.idx === 0 ? 'disabled' : ''}>Atrás</button><button class="btn" data-act="next" ${mine[qid] === undefined ? 'disabled' : ''}>${view.idx === qids.length - 1 ? 'Terminar' : 'Siguiente'}</button></div>`;
-  widget($('[data-widget]', box), qid, true, () => { $('[data-act=next]', box).disabled = false; $$('.progress i', main).forEach((i, k) => i.classList.toggle('done', k < view.idx)); });
+    <div style="display:grid;gap:8px;margin-top:auto"><div style="display:grid;grid-template-columns:1fr 2fr;gap:8px"><button class="btn ghost" data-act="back" ${view.idx === 0 ? 'disabled' : ''}>Atrás</button><button class="btn" data-act="next" disabled></button></div>${last ? `<div class="anon">${lockIcon()} Anónimo: no se guarda tu nombre ni tu número</div>` : ''}</div>`;
+  const paintNext = () => {
+    const b = $('[data-act=next]', box); const ok = complete(qid, valueOf(qid));
+    if (!last) { b.textContent = 'Siguiente'; b.disabled = !ok; return; }
+    const allOk = qids.every(x => complete(x, valueOf(x)));
+    const changed = qids.some(x => !same(valueOf(x), mine[x]));
+    b.disabled = !ok || !allOk || !changed;
+    b.textContent = !allOk ? 'Faltan respuestas' : !changed ? 'Respuestas enviadas ✓' : (qids.some(x => mine[x] !== undefined) ? 'Enviar cambios' : 'Enviar respuestas');
+  };
+  widget($('[data-widget]', box), qid, true, paintNext);
+  paintNext();
+}
+async function sendSurvey(qids) {
+  for (const qid of qids) { const v = valueOf(qid); if (complete(qid, v) && !same(v, mine[qid])) await answer(qid, v); }
+  view.idx = qids.length; renderSurveyStep(currentSlide(), qids);
 }
 
-// ——— Pregunta suelta y debate ———
+// ——— Pregunta suelta y debate: se elige y se pulsa «Enviar voto» ———
+function lockIcon() { return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>`; }
 function buildQuestion(s, qid, debate) {
   const q = QUESTIONS[qid];
-  main.innerHTML = `${header(s.section, esc(q.title), q.sub || (debate ? 'Vota y, si quieres, deja un argumento en el muro.' : null), !debate)}${timerBar()}<div data-widget></div><div class="saved" data-saved></div>` +
+  const open = isOpen(s, qid);
+  main.innerHTML = `${header(s.section, esc(q.title), q.sub || (debate && !STRICT ? 'Vota y, si quieres, deja un argumento en el muro.' : null), !debate)}${timerBar()}<div data-widget></div>
+    <div class="send" data-send><button class="btn" data-act="send" disabled>Enviar voto</button><div class="anon">${lockIcon()} Voto anónimo: no se guarda tu nombre ni tu número</div></div>` +
     (debate && !STRICT ? `<div class="wallbox"><div class="kick">Muro de la redacción</div><textarea maxlength="${WALL_MAX}" placeholder="Tu argumento, en una frase (anónimo)" data-wall-text></textarea><div class="row"><span class="cnt" data-cnt>0 / ${WALL_MAX}</span><button class="btn" data-act="post">Publicar</button></div><div class="posts" data-posts></div></div>` : '');
-  widget($('[data-widget]', main), qid, isOpen(s, qid), () => { $('[data-saved]', main).textContent = 'Guardado ✓ · puedes cambiarlo'; });
+  view.qid = qid;
+  widget($('[data-widget]', main), qid, open, () => paintSend(qid, open));
+  paintSend(qid, open);
   const ta = $('[data-wall-text]', main);
   if (ta) ta.addEventListener('input', () => { $('[data-cnt]', main).textContent = `${ta.value.length} / ${WALL_MAX}`; });
+}
+function paintSend(qid, open) {
+  const box = $('[data-send]', main); if (!box) return;
+  const b = $('[data-act=send]', box); const q = QUESTIONS[qid];
+  const v = valueOf(qid), sent = mine[qid] !== undefined;
+  if (!open) { b.disabled = true; b.textContent = sent ? 'Votación cerrada · tu voto contó ✓' : 'Votación cerrada'; b.classList.toggle('done', sent); return; }
+  if (!complete(qid, v)) { b.disabled = true; b.classList.remove('done'); b.textContent = q.type === 'cases' ? 'Coloca los cuatro casos' : q.type === 'rank' ? 'Ordena todas las opciones' : 'Elige una opción'; return; }
+  if (sent && same(v, mine[qid])) { b.disabled = true; b.classList.add('done'); b.textContent = 'Voto enviado ✓'; return; }
+  b.disabled = false; b.classList.remove('done'); b.textContent = sent ? 'Enviar cambio' : 'Enviar voto';
 }
 
 function buildCompare(s, phone) {
@@ -175,52 +221,51 @@ function renderCompare() {
   }).join('');
 }
 
-// ——— Widgets ———
-function widget(el, qid, open, onSaved) {
-  const q = QUESTIONS[qid]; const my = mine[qid];
+// ——— Widgets: solo guardan un borrador; el envío es siempre con botón ———
+function widget(el, qid, open, onChange) {
+  const q = QUESTIONS[qid]; const cur = valueOf(qid);
   const closedTag = open ? '' : `<div class="closed">Votación cerrada</div>`;
-  const done = async v => { if (!open) return; await answer(qid, v); onSaved && onSaved(); paint(); };
+  const pick = v => { if (!open) return; setDraft(qid, v); paint(); onChange && onChange(v); };
   let paint;
   switch (q.type) {
     case 'choice': {
       el.innerHTML = closedTag + `<div class="opts">${q.options.map((o, i) => `<button class="opt" data-i="${i}" ${open ? '' : 'disabled'}><span>${esc(o)}${q.hints ? `<small>${esc(q.hints[i])}</small>` : ''}</span><span class="tick">✓</span></button>`).join('')}</div>`;
-      paint = () => $$('.opt', el).forEach(b => b.classList.toggle('sel', Number(b.dataset.i) === mine[qid]));
-      el.addEventListener('click', e => { const b = e.target.closest('.opt'); if (b) done(Number(b.dataset.i)); });
+      paint = () => $$('.opt', el).forEach(b => b.classList.toggle('sel', Number(b.dataset.i) === valueOf(qid)));
+      el.addEventListener('click', e => { const b = e.target.closest('.opt'); if (b) pick(Number(b.dataset.i)); });
       break;
     }
     case 'scale': {
       el.innerHTML = closedTag + `<div class="scale">${[...Array(q.max - q.min + 1).keys()].map(k => `<button class="opt" data-v="${q.min + k}" ${open ? '' : 'disabled'}>${q.min + k}</button>`).join('')}</div><div class="scale-labels"><span>${esc(q.labels[0])}</span><span>${esc(q.labels[1])}</span></div>`;
-      paint = () => $$('.opt', el).forEach(b => b.classList.toggle('sel', Number(b.dataset.v) === mine[qid]));
-      el.addEventListener('click', e => { const b = e.target.closest('.opt'); if (b) done(Number(b.dataset.v)); });
+      paint = () => $$('.opt', el).forEach(b => b.classList.toggle('sel', Number(b.dataset.v) === valueOf(qid)));
+      el.addEventListener('click', e => { const b = e.target.closest('.opt'); if (b) pick(Number(b.dataset.v)); });
       break;
     }
     case 'slider': {
-      const start = my ?? Math.round((q.min + q.max) / 2);
-      el.innerHTML = closedTag + `<div class="slider"><div class="val"><span data-v>${my ?? '–'}</span><small>${q.unit || ''}</small></div><input type="range" min="${q.min}" max="${q.max}" step="1" value="${start}" ${open ? '' : 'disabled'}><div class="scale-labels"><span>${esc(q.labels?.[0] || q.min)}</span><span>${esc(q.labels?.[1] || q.max)}</span></div>${my == null ? '<div class="sub" style="text-align:center;font-size:13px">Desliza y suelta para guardar</div>' : ''}${q.optional ? `<button class="btn ghost" data-skip>Prefiero no decirlo</button>` : ''}</div>`;
+      const start = typeof cur === 'number' ? cur : Math.round((q.min + q.max) / 2);
+      el.innerHTML = closedTag + `<div class="slider"><div class="val"><span data-v>${typeof cur === 'number' ? cur : '–'}</span><small>${q.unit || ''}</small></div><input type="range" min="${q.min}" max="${q.max}" step="1" value="${start}" aria-label="${esc(q.title)}" ${open ? '' : 'disabled'}><div class="scale-labels"><span>${esc(q.labels?.[0] || q.min)}</span><span>${esc(q.labels?.[1] || q.max)}</span></div><div class="sub" data-hint style="text-align:center;font-size:13px">${cur === undefined ? 'Desliza para elegir' : cur === null ? 'Has elegido no contestar' : ''}</div>${q.optional ? `<button class="btn ghost" data-skip>Prefiero no decirlo</button>` : ''}</div>`;
       const inp = $('input', el);
-      inp.addEventListener('input', () => { $('[data-v]', el).textContent = inp.value; });
-      inp.addEventListener('change', () => done(Number(inp.value)));
-      $('[data-skip]', el)?.addEventListener('click', () => { mine[qid] = null; save('mine_' + (store.session || 'none'), mine); onSaved && onSaved(); });
+      const fromInput = () => { $('[data-v]', el).textContent = inp.value; $('[data-hint]', el).textContent = ''; pick(Number(inp.value)); };
+      inp.addEventListener('input', fromInput); inp.addEventListener('change', fromInput);
+      $('[data-skip]', el)?.addEventListener('click', () => { $('[data-v]', el).textContent = '–'; $('[data-hint]', el).textContent = 'Has elegido no contestar'; pick(null); });
       paint = () => {};
       break;
     }
     case 'cases': {
-      const val = { ...(my || {}) };
       el.innerHTML = closedTag + `<div style="display:grid;gap:18px">${q.cases.map(c => `<div class="case" data-c="${c.id}"><div class="txt"><b>${c.id}</b>${esc(c.text)}</div><div class="steps">${q.steps.map((st, i) => `<button class="${st.zone}" data-i="${i}" ${open ? '' : 'disabled'}>${esc(st.label)}</button>`).join('')}</div></div>`).join('')}</div>`;
-      paint = () => $$('.case', el).forEach(c => $$('button', c).forEach(b => b.classList.toggle('sel', val[c.dataset.c] === Number(b.dataset.i))));
-      el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || !open) return; val[b.closest('.case').dataset.c] = Number(b.dataset.i); paint(); if (q.cases.every(c => val[c.id] != null)) done({ ...val }); });
+      paint = () => { const val = valueOf(qid) || {}; $$('.case', el).forEach(c => $$('button', c).forEach(b => b.classList.toggle('sel', val[c.dataset.c] === Number(b.dataset.i)))); };
+      el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || !open) return; const val = { ...(valueOf(qid) || {}) }; val[b.closest('.case').dataset.c] = Number(b.dataset.i); pick(val); });
       break;
     }
     case 'rank': {
-      let order = Array.isArray(my) ? [...my] : [];
       el.innerHTML = closedTag + `<div class="rank">${q.items.map((it, i) => `<button class="opt" data-i="${i}" ${open ? '' : 'disabled'}><span>${esc(it)}</span><span class="tick" data-n></span></button>`).join('')}</div><button class="btn ghost" data-reset style="margin-top:6px">Empezar de nuevo</button>`;
-      paint = () => $$('.opt', el).forEach(b => { const pos = order.indexOf(Number(b.dataset.i)); b.classList.toggle('sel', pos >= 0); $('[data-n]', b).textContent = pos >= 0 ? pos + 1 : ''; });
+      paint = () => { const order = Array.isArray(valueOf(qid)) ? valueOf(qid) : []; $$('.opt', el).forEach(b => { const pos = order.indexOf(Number(b.dataset.i)); b.classList.toggle('sel', pos >= 0); $('[data-n]', b).textContent = pos >= 0 ? pos + 1 : ''; }); };
       el.addEventListener('click', e => {
         if (!open) return;
-        if (e.target.closest('[data-reset]')) { order = []; paint(); return; }
+        if (e.target.closest('[data-reset]')) { pick([]); return; }
         const b = e.target.closest('.opt'); if (!b) return; const i = Number(b.dataset.i);
+        let order = Array.isArray(valueOf(qid)) ? [...valueOf(qid)] : [];
         if (order.includes(i)) order = order.slice(0, order.indexOf(i)); else order.push(i);
-        paint(); if (order.length === q.items.length) done([...order]);
+        pick(order);
       });
       break;
     }
@@ -246,6 +291,7 @@ function renderPosts() {
 }
 
 function renderSoft() {
+  if (view.qid && $('[data-send]', main)) paintSend(view.qid, isOpen(currentSlide(), view.qid));
   renderPosts();
   renderCompare();
   const pe = $('[data-presence]', main); if (pe) pe.textContent = aggs._presence?.n ?? '…';
@@ -267,7 +313,19 @@ main.addEventListener('click', async e => {
   if (act === 'survey') { view.forceSurvey = true; view.idx = null; view.key = null; render(); }
   if (act === 'review') { view.idx = 0; view.key = null; view.forceSurvey = true; render(); }
   if (act === 'post') post();
-  if (act === 'next' || act === 'back') { view.idx += act === 'next' ? 1 : -1; const s = currentSlide(); const qids = (view.forceSurvey && s.phone.kind !== 'survey') ? SURVEY_IDS : s.phone.qids; renderSurveyStep(s, qids); }
+  if (act === 'back') { view.idx -= 1; renderSurveyStep(currentSlide(), surveyQids()); }
+  if (act === 'next') {
+    const qids = surveyQids();
+    if (view.idx === qids.length - 1) { e.target.closest('button').disabled = true; await sendSurvey(qids); }
+    else { view.idx += 1; renderSurveyStep(currentSlide(), qids); }
+  }
+  if (act === 'send') {
+    const qid = view.qid; const b = e.target.closest('button'); if (!qid || b.disabled) return;
+    b.disabled = true; b.textContent = 'Enviando…';
+    await answer(qid, valueOf(qid));
+    paintSend(qid, isOpen(currentSlide(), qid));
+    b.animate([{ transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 220 });
+  }
 });
 window.addEventListener('hashchange', () => { view.key = null; render(); });
-window.__vota = { store, mine, me };
+window.__vota = { store, get mine() { return mine; }, get draft() { return draft; }, me };
