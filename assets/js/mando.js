@@ -1,5 +1,5 @@
 // Consola de ponente: guion de la slide actual, estado del público, un botón grande y las herramientas plegadas.
-import { QUESTIONS, SLIDES, SLIDE_BY_N, ROLES, LENSES, SURVEY_IDS, PRESENTERS, TOTAL_SECONDS, POLL_SLIDES } from './questions.js';
+import { QUESTIONS, SLIDES, SLIDE_BY_N, ROLES, LENSES, SURVEY_IDS, PRESENTERS, TOTAL_SECONDS, POLL_SLIDES, STRICT } from './questions.js';
 import { startAggregator } from './aggregator.js';
 import { createStore, wallSort } from './store.js';
 import { demoSeed } from './demo.js';
@@ -32,7 +32,8 @@ if (store.mode === 'mqtt' && !store.canWrite) {
   }));
 }
 
-let state = null, wall = {}, aggs = {}, builtFor = null, status = { online: 0, total: 0 };
+let state = null, wall = {}, aggs = {}, builtFor = null, status = { online: 0, total: 0 }, readyDone = false;
+store.ready.then(() => { readyDone = true; builtFor = null; render(); });
 // La consola también calcula los resultados: así funcionan aunque el proyector muestre un PowerPoint.
 if (store.canWrite) startAggregator(store);
 // Mantener la pantalla encendida mientras la consola está abierta (si el móvil lo permite).
@@ -47,7 +48,7 @@ function needAgg(qid) { if (aggSubs[qid]) return; aggSubs[qid] = store.onAgg(qid
 needAgg('_presence');
 store.onWall(w => { wall = w || {}; renderSoft(); });
 store.onState(st => { state = forcedSlide ? { ...st, slide: forcedSlide } : st; render(); });
-store.onStatus(st => { status = st; renderSoft(); });
+store.onStatus(st => { status = st; if (store.mode === 'mqtt' && !store.session) render(); else renderSoft(); });
 store.onSession(() => { builtFor = null; render(); });
 setInterval(renderSoft, 1000);
 
@@ -55,15 +56,18 @@ function cur() { return SLIDE_BY_N[state?.slide || 1]; }
 function describePhone(s) {
   const k = s.phone.kind; const q = s.phone.qid ? QUESTIONS[s.phone.qid] : null;
   const type = { choice: 'voto', scale: 'escala', slider: 'deslizador', cases: 'casos en el gradiente', rank: 'ranking' }[q?.type] || '';
-  return { welcome: 'bienvenida y carné de rol', survey: `encuesta de ${s.phone.qids?.length || 0} preguntas`, compare: 'tú frente a la clase', question: type, debate: `${type} + muro`, listen: 'ficha de escucha', thanks: 'gracias y fuentes' }[k] || k;
+  return { welcome: STRICT ? 'bienvenida' : 'bienvenida y carné de rol', survey: `encuesta de ${s.phone.qids?.length || 0} preguntas`, compare: 'tú frente a la clase', question: type, debate: `${type} + muro`, listen: 'ficha de escucha', thanks: 'gracias y fuentes' }[k] || k;
 }
 
 function render() {
   if (!state) return;
   if (store.mode === 'mqtt' && !store.session) {
     builtFor = null;
-    app.innerHTML = `<div class="hdr"><span>Consola de ponente</span><span class="mode" data-modelabel>…</span></div>
-      <div class="now"><div class="ttl">No hay sesión abierta</div><p class="note">Ábrela antes de que entre la clase. Los móviles que ya estén en la página entrarán solos.</p><button class="btn primary" data-newsession><span>Abrir sesión nueva</span></button></div>`;
+    // Mientras conecta no se ofrece «abrir sesión»: abrir una nueva a mitad de clase borraría los votos.
+    const waiting = !readyDone || !status.online;
+    app.innerHTML = `<div class="hdr"><span>Consola de ponente</span><span class="mode" data-modelabel>…</span></div>` + (waiting
+      ? `<div class="now"><div class="ttl">Conectando con la sala…</div><p class="note">${status.online ? 'Buscando la sesión activa.' : 'Sin conexión todavía. Si tarda, revisa la red del móvil.'}</p></div>`
+      : `<div class="now"><div class="ttl">No hay sesión abierta</div><p class="note">Ábrela antes de que entre la clase. Los móviles que ya estén en la página entrarán solos.</p><button class="btn primary" data-newsession><span>Abrir sesión nueva</span></button></div>`);
     renderSoft();
     return;
   }
@@ -184,7 +188,7 @@ app.addEventListener('click', async e => {
   if (b.hasAttribute('data-unpin')) await store.setState({ pinned: null });
   if (d.pin) await store.setState({ pinned: state.pinned === d.pin ? null : d.pin });
   if (d.hide) await store.wallUpdate(d.hide, { hidden: !wall[d.hide]?.hidden });
-  if (b.hasAttribute('data-newsession')) { await store.resetAll(); builtFor = null; render(); }
+  if (b.hasAttribute('data-newsession')) { if (store.session && !confirm('Ya hay una sesión abierta. ¿Empezar otra (borra los votos)?')) return; await store.resetAll(); builtFor = null; render(); }
   if (b.hasAttribute('data-resetall')) { if (confirm('Esto empieza una sesión nueva: respuestas, muro y reloj a cero. Los móviles cambian solos. ¿Seguro?')) { await store.resetAll(); if (store.mode === 'local') location.reload(); else { builtFor = null; render(); } } }
   if (b.hasAttribute('data-forget')) { if (confirm('¿Quitar la clave de ponente de este móvil?')) { await store.logout(); location.reload(); } }
 });

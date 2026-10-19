@@ -339,17 +339,19 @@ setInterval(() => {
 }, 500);
 
 // ——— Avisos (sin sesión, sin conexión, vista de solo lectura) ———
+let readyDone = false; store.ready.then(() => { readyDone = true; updateBanner(); });
 function updateBanner() {
   const b = $('#banner'); if (!b) return;
   let html = '';
   if (live && !status.online) html = `<b>Sin conexión con la sala.</b> Reintentando… Comprueba la red del portátil.`;
+  else if (live && !store.session && canWrite && !readyDone) html = `<b>Conectando con la sala…</b>`;
   else if (live && !store.session && canWrite) html = `<b>No hay sesión abierta.</b> <button data-newsession>Abrir sesión nueva</button>`;
   else if (live && !store.session) html = `<b>Esperando a que los ponentes abran la sesión…</b>`;
   else if (live && !canWrite && !solo) html = `Vista de solo lectura. <button data-key>Soy ponente</button>`;
   b.innerHTML = html; b.hidden = !html;
 }
 document.addEventListener('click', async e => {
-  if (e.target.closest('[data-newsession]')) { await store.resetAll(); updateBanner(); }
+  if (e.target.closest('[data-newsession]')) { if (store.session) return; await store.resetAll(); updateBanner(); }
   if (e.target.closest('[data-key]')) {
     const k = prompt('Pega la clave de ponente (está en tu enlace de ponente, después de «#k=»):');
     if (k && await store.login(k.replace(/^.*#k=/, ''))) location.reload(); else if (k) alert('Clave incorrecta.');
