@@ -129,7 +129,6 @@ store.onSession(sess => {
   lastSession = sess; updateBanner();
 });
 
-if (solo) deck.slide(solo - 1);
 // Latido: la consola sabe que hay una presentación HTML que atiende «Siguiente».
 setInterval(() => { if (canWrite && synced && live) store.setState({ deckAt: Date.now() }); }, 20000);
 // Al arrancar: si ya hay una sesión con slide guardada, se reanuda; si no, se publica la actual.
@@ -358,5 +357,7 @@ document.addEventListener('click', async e => {
 });
 setInterval(updateBanner, 2000);
 
+// Vista incrustada: ir a su slide cuando ya está todo inicializado.
+if (solo) deck.slide(solo - 1);
 updateTicker();
 window.__deck = { store, deck, aggs, responses };
