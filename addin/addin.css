@@ -1,6 +1,4 @@
-/* Complemento de PowerPoint: un marco que escala el gráfico en vivo para que encaje en el recuadro de la slide */
-html, body { margin: 0; height: 100%; overflow: hidden; background: #fff; font-family: var(--font); }
-#view { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #fff; }
+/* Complemento de PowerPoint: selector de vista y botón «Cambiar vista» (el gráfico lo dibuja pantalla.css) */
 .pick { position: fixed; inset: 0; background: rgba(255,255,255,.96); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 50; font-size: 14px; }
 .pick b { font-size: 15px; }
 .pick .opts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 90%; }

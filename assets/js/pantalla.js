@@ -13,11 +13,22 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const stage = $('#stage');
 const params = new URLSearchParams(location.search);
 if (params.has('demo')) await demoSeed(store);
-// Vista fija: ?vista=d5 (el complemento de PowerPoint la pasa así, con la que guarda la diapositiva).
-// Modo incrustado (?embed): sin cabecera ni título, solo el gráfico en vivo.
-const EMBED = params.has('embed');
-let forced = params.get('vista');
+// Vista fija: ?vista=d5, o la que guarda el complemento de PowerPoint en la diapositiva.
+// Modo incrustado (?embed o complemento): sin cabecera ni título, solo el gráfico en vivo.
+const ADDIN = window.__ADDIN__ || null;
+const EMBED = params.has('embed') || !!ADDIN;
+let forced = params.get('vista') || (ADDIN ? await ADDIN.view : null);
 document.body.classList.toggle('embed', EMBED);
+// Incrustado: el gráfico se maqueta a 1600 px de ancho (con el alto que pida la forma del recuadro) y se escala.
+const DESIGN_W = 1600;
+function fitEmbed() {
+  if (!EMBED || !innerWidth || !innerHeight) return;
+  const k = innerWidth / DESIGN_W, h = Math.round(innerHeight / k);
+  document.documentElement.style.setProperty('--vw', DESIGN_W / 100 + 'px');
+  document.documentElement.style.setProperty('--vh', h / 100 + 'px');
+  Object.assign(stage.style, { width: DESIGN_W + 'px', height: h + 'px', transform: `scale(${k})` });
+}
+if (EMBED) { addEventListener('resize', fitEmbed); fitEmbed(); setInterval(fitEmbed, 2000); }
 const studentUrl = (cfg.baseUrl || new URL('../', location.href).href).replace(/\/?$/, '/');
 
 // Qué vista corresponde a cada slide abierta desde la consola.
@@ -75,7 +86,7 @@ function pickView() {
 // ——— Vistas ———
 const BUILD = {
   qr() {
-    return `<div class="split"><div class="qr big huge" data-qr></div><div><div class="kick">Votación anónima</div><h1>Escanea el código y entra</h1><p class="sub">Sin registro ni datos personales. El móvil cambia solo con cada votación.</p><div class="counter" data-k="presence" style="margin-top:4vh"><b>0</b><span>en la sala</span></div></div></div>`;
+    return `<div class="split"><div class="qr big huge" data-qr></div><div><div class="kick">Votación anónima</div><h1>Escanea el código y entra</h1><p class="sub">Sin registro ni datos personales. El móvil cambia solo con cada votación.</p><div class="counter" data-k="presence" style="margin-top:calc(4 * var(--vh))"><b>0</b><span>en la sala</span></div></div></div>`;
   },
   encuesta() {
     if (EMBED) return `<div class="embed-count"><div class="counter" data-k="survey"><b>0</b><span>han enviado la encuesta</span></div><div class="progress"><i data-prog></i></div><div class="hint" data-of></div></div>`;
