@@ -1,0 +1,11 @@
+/* Complemento de PowerPoint: un marco que escala el gráfico en vivo para que encaje en el recuadro de la slide */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #fff; font-family: var(--font); }
+#view { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #fff; }
+.pick { position: fixed; inset: 0; background: rgba(255,255,255,.96); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 50; font-size: 14px; }
+.pick b { font-size: 15px; }
+.pick .opts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 90%; }
+.pick button { font: inherit; font-size: 13px; padding: 8px 12px; border: 1px solid var(--text); background: #fff; cursor: pointer; }
+.pick button.cur { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* Solo en modo edición, y solo al pasar el ratón: así no tapa el gráfico */
+.gear { position: fixed; right: 6px; top: 6px; z-index: 40; font: inherit; font-size: 11px; padding: 4px 8px; border: 1px solid var(--text); background: #fff; color: var(--text); cursor: pointer; opacity: 0; transition: opacity .2s; }
+body:hover .gear { opacity: .95; }

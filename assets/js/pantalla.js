@@ -13,11 +13,10 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const stage = $('#stage');
 const params = new URLSearchParams(location.search);
 if (params.has('demo')) await demoSeed(store);
-// Vista fija: ?vista=d5, o la que guarda el complemento de PowerPoint en la diapositiva.
-// Modo incrustado (?embed o complemento): sin cabecera ni título, solo el gráfico en vivo.
-const ADDIN = window.__ADDIN__ || null;
-const EMBED = params.has('embed') || !!ADDIN;
-let forced = params.get('vista') || (ADDIN ? await ADDIN.view : null);
+// Vista fija: ?vista=d5 (el complemento de PowerPoint la pasa así, con la que guarda la diapositiva).
+// Modo incrustado (?embed): sin cabecera ni título, solo el gráfico en vivo.
+const EMBED = params.has('embed');
+let forced = params.get('vista');
 document.body.classList.toggle('embed', EMBED);
 const studentUrl = (cfg.baseUrl || new URL('../', location.href).href).replace(/\/?$/, '/');
 

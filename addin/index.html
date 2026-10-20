@@ -6,21 +6,14 @@
 <meta name="robots" content="noindex">
 <title>Ética · resultados en directo</title>
 <link rel="stylesheet" href="../assets/css/tokens.css">
-<link rel="stylesheet" href="../assets/css/pantalla.css">
+<link rel="stylesheet" href="addin.css">
 <!-- Office.js: necesario para que PowerPoint cargue la página como complemento -->
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 <script src="addin.js"></script>
 </head>
-<body class="embed">
-<header class="top">
-  <div class="brand"><b>La ética del periodismo</b><span>Resultados en directo</span></div>
-  <div class="meta"><span class="live" data-conn>conectando…</span><span><b data-presence>0</b> en la sala</span><span class="miniqr" data-miniqr></span></div>
-</header>
-<main id="stage" aria-live="polite"></main>
-<button class="fs" id="fs" type="button" hidden>Pantalla completa</button>
+<body>
+<!-- El gráfico se dibuja a un tamaño fijo grande y se escala para encajar en el recuadro (ver addin.js) -->
+<iframe id="view" title="Resultados en directo" scrolling="no" tabindex="-1"></iframe>
 <button class="gear" id="gear" type="button" hidden>Cambiar vista</button>
-<script src="../assets/vendor/qrcode.js"></script>
-<script src="../config.js"></script>
-<script type="module" src="../assets/js/pantalla.js"></script>
 </body>
 </html>
