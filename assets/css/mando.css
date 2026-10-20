@@ -90,3 +90,8 @@ details .body { padding: 0 0 14px; display: grid; gap: 8px; }
 
 .pollrow .btn small { display: block; font-size: 10px; font-weight: 500; color: var(--text-2); margin-top: 2px; }
 .pollrow .btn.cur small { color: rgba(255,255,255,.8); }
+
+/* QR para abrir la consola en otro dispositivo */
+.share { display: grid; gap: 8px; justify-items: center; padding: 10px 0; }
+.share .qr { width: 220px; height: 220px; background: #fff; padding: 6px; border: 1px solid var(--line-strong); }
+.share .qr svg { width: 100%; height: 100%; display: block; }

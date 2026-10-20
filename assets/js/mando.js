@@ -1,4 +1,5 @@
 // Consola de ponente: guion de la slide actual, estado del público, un botón grande y las herramientas plegadas.
+import { extractSecret } from './crypto.js';
 import { QUESTIONS, SLIDES, SLIDE_BY_N, ROLES, LENSES, SURVEY_IDS, PRESENTERS, TOTAL_SECONDS, POLL_SLIDES, STRICT, SCREEN_SLIDES, SCREEN_VIEWS } from './questions.js';
 import { startAggregator } from './aggregator.js';
 import { createStore, wallSort } from './store.js';
@@ -24,14 +25,17 @@ if (store.mode === 'firebase' && !store.isPresenter) {
 if (store.mode === 'mqtt' && !store.canWrite) {
   app.innerHTML = `<div class="hdr"><span>Consola de ponente</span><span class="mode">en vivo</span></div>
     <form class="login"><b>Falta la clave de ponente</b><p class="note">Abre esta consola desde tu <b>enlace de ponente</b> (te lo habrá pasado el grupo). Una vez abierto, este móvil la recuerda. También puedes pegar aquí el enlace o la clave.</p>
-    <input name="k" placeholder="Enlace o clave de ponente" autocomplete="off" required><button class="btn primary">Entrar</button><span class="note" data-err></span></form>`;
+    <input name="k" placeholder="Enlace o clave de ponente" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required><button class="btn primary">Entrar</button><span class="note" data-err></span></form>`;
   await new Promise(resolve => $('form', app).addEventListener('submit', async e => {
     e.preventDefault();
-    const k = e.target.k.value.trim().replace(/^.*#k=/, '');
-    if (await store.login(k)) resolve(); else $('[data-err]', app).textContent = 'Clave incorrecta.';
+    const k = extractSecret(e.target.k.value);
+    if (!k) { $('[data-err]', app).textContent = 'Eso no parece una clave. Pega el enlace de ponente completo (el que termina en «#k=…»).'; return; }
+    if (await store.login(k)) resolve(); else $('[data-err]', app).textContent = 'La clave no es la de esta presentación. Revisa que el enlace esté completo.';
   }));
 }
 
+// Enlace de ponente de este dispositivo (con la clave), para abrir la consola en otro
+const shareLink = () => new URL('./', location.href).href + '#k=' + (store.secret || '');
 let state = null, wall = {}, aggs = {}, builtFor = null, status = { online: 0, total: 0 }, readyDone = false;
 store.ready.then(() => { readyDone = true; builtFor = null; render(); });
 // La consola también calcula los resultados: así funcionan aunque el proyector muestre un PowerPoint.
@@ -97,7 +101,7 @@ function build(s) {
     ${s.phone.kind === 'debate' ? `<details open><summary>Muro <span data-wallcount></span></summary><div class="body"><div class="row2"><button class="btn sm" data-wallvis>Ocultar muro</button><button class="btn sm" data-unpin>Quitar destacado</button></div><div class="posts" data-posts></div><div class="row2"><button class="btn warn sm" data-simwall>Simular argumentos</button><button class="btn danger sm" data-wallclear>Vaciar muro</button></div></div></details>` : ''}
     <details><summary>Pantalla de resultados</summary><div class="body"><p class="note">Abre <b>${esc(new URL('../pantalla/', location.href).href.replace(/^https?:\/\//, ''))}</b> en otro ordenador, una tele o un segundo proyector. En «Automático» sigue lo que abras arriba; aquí puedes fijar otra vista.</p><div class="pollrow">${SCREEN_VIEWS.map(v => `<button class="btn sm" data-screen="${v.id}">${esc(v.label)}</button>`).join('')}</div></div></details>
     <details><summary>Ir a una slide</summary><div class="body"><div class="slides">${SLIDES.map(x => `<button data-goto="${x.n}" class="${x.n === s.n ? 'cur' : ''}"><b>${String(x.n).padStart(2, '0')}</b><span>${esc(x.title)}</span><span>${['debate', 'question', 'survey'].includes(x.phone.kind) ? `<span class="k">${x.phone.kind === 'debate' ? 'debate' : 'voto'}</span> ` : ''}<span class="w">${esc(x.who || '')} · ${mmss(x.t)}</span></span></button>`).join('')}</div></div></details>
-    <details><summary>Sesión</summary><div class="body"><div class="row2"><button class="btn" data-startclock>Reiniciar reloj</button><a class="btn" style="text-align:center;text-decoration:none;line-height:22px" href="../" target="_blank">Abrir presentación</a></div><button class="btn danger" data-resetall>Preparar sesión nueva (borra todo)</button>${store.mode === 'mqtt' ? `<button class="btn sm" data-forget>Olvidar la clave en este móvil</button>` : ''}<p class="note">Solo pulsa quien habla. El portátil solo muestra la presentación. Toca un paso del guion para marcarlo como hecho.</p></div></details>`;
+    <details><summary>Sesión</summary><div class="body"><div class="row2"><button class="btn" data-startclock>Reiniciar reloj</button><a class="btn" style="text-align:center;text-decoration:none;line-height:22px" href="../" target="_blank">Abrir presentación</a></div><button class="btn danger" data-resetall>Preparar sesión nueva (borra todo)</button>${store.mode === 'mqtt' ? `<button class="btn sm" data-share>Abrir la consola en otro dispositivo</button><div class="share" data-sharebox hidden><div class="qr" data-shareqr></div><p class="note">Escanéalo con la cámara del otro móvil u ordenador: entra ya con la clave. <b>No lo enseñes en el proyector</b>: quien lo escanee puede abrir votaciones y leer las respuestas.</p><button class="btn sm" data-copylink>Copiar el enlace</button></div><button class="btn sm" data-forget>Olvidar la clave en este móvil</button>` : ''}<p class="note">Solo pulsa quien habla. El portátil solo muestra la presentación. Toca un paso del guion para marcarlo como hecho.</p></div></details>`;
   renderAfter(s, next);
 }
 function renderAfter(s, next) {
@@ -193,6 +197,13 @@ app.addEventListener('click', async e => {
   if (d.hide) await store.wallUpdate(d.hide, { hidden: !wall[d.hide]?.hidden });
   if (b.hasAttribute('data-newsession')) { if (store.session && !confirm('Ya hay una sesión abierta. ¿Empezar otra (borra los votos)?')) return; await store.resetAll(); builtFor = null; render(); }
   if (b.hasAttribute('data-resetall')) { if (confirm('Esto empieza una sesión nueva: respuestas, muro y reloj a cero. Los móviles cambian solos. ¿Seguro?')) { await store.resetAll(); if (store.mode === 'local') location.reload(); else { builtFor = null; render(); } } }
+  if (b.hasAttribute('data-share')) {
+    const box = $('[data-sharebox]', app); box.hidden = !box.hidden; if (box.hidden) return;
+    const qr = qrcode(0, 'M'); qr.addData(shareLink()); qr.make();
+    $('[data-shareqr]', app).innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+    return;
+  }
+  if (b.hasAttribute('data-copylink')) { try { await navigator.clipboard.writeText(shareLink()); b.textContent = 'Enlace copiado ✓'; } catch { prompt('Copia el enlace:', shareLink()); } return; }
   if (b.hasAttribute('data-forget')) { if (confirm('¿Quitar la clave de ponente de este móvil?')) { await store.logout(); location.reload(); } }
 });
 window.__mando = { store };

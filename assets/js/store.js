@@ -152,6 +152,8 @@ export class MqttStore {
     for (const c of this.clients) { c.subscribe(this.base + 'current'); c.connect(); }
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.clients.forEach(c => c.kick()); });
     if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('online', () => this.clients.forEach(c => c.kick()));
+    // Pegar el enlace de ponente en la barra de una pestaña ya abierta solo cambia el «#k=…»: se recarga para leer la clave
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('hashchange', () => { if (/[#&]k=/.test(location.hash)) location.reload(); });
     // Listo cuando se conoce la sesión y han llegado los mensajes retenidos.
     // Un ponente que no ve sesión en 5 s reanuda la última que conoce (nunca crea una nueva sola).
     this.ready = new Promise(resolve => {
@@ -452,10 +454,10 @@ export class MqttStore {
   async login(secret) {
     const priv = await importPrivate(this.cfg.keys, secret, this.pub);
     if (!priv) return false;
-    this.priv = priv; this.opener = makeOpener(priv); saveSecret(this.room, secret);
+    this.priv = priv; this.opener = makeOpener(priv); this.secret = String(secret).trim(); saveSecret(this.room, this.secret);
     return true;
   }
-  async logout() { this.priv = null; forgetSecret(this.room); }
+  async logout() { this.priv = null; this.secret = null; forgetSecret(this.room); }
   onAuth(cb) { cb({ uid: this.uid, presenter: this.isPresenter }); return () => {}; }
 }
 

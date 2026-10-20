@@ -85,17 +85,27 @@ export function makeOpener(priv) {
 }
 
 // Clave de ponente: llega en el enlace (#k=...) una vez y se guarda en este dispositivo.
+// La clave de ponente son dos partes en base64url separadas por un punto. Se saca de cualquier texto pegado:
+// el enlace completo, la clave sola, con comillas o espacios alrededor, o una fila de la tabla de enlaces.
+export function extractSecret(text) {
+  let t = String(text || '');
+  try { t = decodeURIComponent(t); } catch {}
+  const m = t.match(/[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/);
+  return m ? m[0] : null;
+}
 export function takeSecret(room) {
   const storeKey = 'erp_key_' + room;
+  let fromLink = null;
   try {
-    const m = (globalThis.location?.hash || '').match(/[#&]k=([A-Za-z0-9_\-.]+)/);
-    if (m) {
-      localStorage.setItem(storeKey, m[1]);
-      const rest = location.hash.replace(/[#&]?k=[A-Za-z0-9_\-.]+/, '').replace(/^#?&/, '#');
+    const hash = globalThis.location?.hash || '';
+    if (/[#&]k=/.test(hash)) {
+      fromLink = extractSecret(hash.slice(hash.indexOf('k=') + 2));
+      const rest = hash.replace(/[#&]?k=[^&]*/, '').replace(/^#?&/, '#');
       history.replaceState(null, '', location.pathname + location.search + (rest && rest !== '#' ? rest : ''));
     }
-    return localStorage.getItem(storeKey);
-  } catch { return null; }
+  } catch {}
+  try { if (fromLink) localStorage.setItem(storeKey, fromLink); return fromLink || localStorage.getItem(storeKey); }
+  catch { return fromLink; } // navegador sin almacenamiento (ventana privada antigua): vale para esta visita
 }
 export function saveSecret(room, secret) { try { localStorage.setItem('erp_key_' + room, secret); } catch {} }
 export function forgetSecret(room) { try { localStorage.removeItem('erp_key_' + room); } catch {} }
