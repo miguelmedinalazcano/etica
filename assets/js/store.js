@@ -126,6 +126,7 @@ export class MqttStore {
     if (!uid || !/^[a-z0-9]+$/.test(uid)) { uid = 'u' + rnd(10); try { localStorage.setItem('erp_uid', uid); } catch {} }
     this.uid = uid;
     this.session = null; this.sessionT = 0; this.currentText = null;
+    this.curLast = new Map(); this.healT = new Map(); // último «current» recibido de cada servidor y correcciones pendientes
     this.d = emptyData();
     this.listeners = new Map(); this.pending = new Set(); this.flushT = null;
     this.kinds = new Set(); this.cmdListeners = new Set(); this.seenCmd = new Set();
@@ -145,8 +146,8 @@ export class MqttStore {
     if (secret) await this.login(secret);
     this.clients = (this.cfg.brokers || []).map((url, i) => new MqttClient(url, {
       clientId: `erp_${this.uid}_${i}_${rnd(4)}`,
-      onMessage: (t, p) => this._onMsg(t, p),
-      onStatus: up => { this.online.set(i, up); this._notify('status'); if (up && this.me) this._heartbeat(); },
+      onMessage: (t, p) => this._onMsg(t, p, i),
+      onStatus: up => { this.online.set(i, up); this._notify('status'); if (up) this._checkCurrent(i); if (up && this.me) this._heartbeat(); },
     }));
     for (const c of this.clients) { c.subscribe(this.base + 'current'); c.connect(); }
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.clients.forEach(c => c.kick()); });
@@ -211,15 +212,16 @@ export class MqttStore {
   }
 
   // ——— Mensajes entrantes ———
-  _onMsg(topic, payload) {
+  _onMsg(topic, payload, i) {
     const text = payload.length ? td.decode(payload) : '';
     if (!text) for (const c of this.clients) c.sticky.delete(topic);
     if (topic === this.base + 'current') {
-      if (!text) return;
+      if (!text) { this.curLast.set(i, 0); this._heal(i); return; } // el servidor ha perdido el puntero
       verifyBody(this.pub, text).then(b => {
-        if (!b || !b.session || !(b.t > this.sessionT)) return;
-        if (this.canWrite) { this.currentText = text; for (const c of this.clients) c.sticky.set(topic, payload); }
-        this._switch(b.session, b.t);
+        if (!b || !b.session || !b.t) return;
+        this.curLast.set(i, b.t);
+        if (b.t > this.sessionT) { this.currentText = text; this._switch(b.session, b.t); }
+        else if (b.t < this.sessionT) this._heal(i); // alguien ha vuelto a publicar una sesión vieja: se corrige
       });
       return;
     }
@@ -320,6 +322,22 @@ export class MqttStore {
     if (this.me) this._heartbeat();
     for (const k of new Set([...this.listeners.keys(), 'session', 'state', 'wall'])) this._notify(k);
   }
+  // El puntero a la sesión («current») va firmado, así que cualquier dispositivo puede volver a publicarlo.
+  // Si un servidor tiene uno más antiguo que el nuestro (o ninguno), se vuelve a publicar el más reciente.
+  // Así un dispositivo que se reconecta tarde nunca devuelve la sala a una sesión vieja.
+  _heal(i, delay = 300 + Math.random() * 1200) {
+    if (!this.currentText || this.healT.has(i)) return;
+    this.healT.set(i, setTimeout(() => {
+      this.healT.delete(i);
+      if ((this.curLast.get(i) || 0) >= this.sessionT) return; // ya lo ha corregido otro
+      this.clients[i]?.publish(this.base + 'current', this.currentText, { retain: true });
+    }, delay));
+  }
+  // Al reconectar: si en unos segundos ese servidor no ha entregado la sesión actual, se le vuelve a publicar.
+  _checkCurrent(i) {
+    this.curLast.delete(i);
+    setTimeout(() => { if (this.online.get(i) && (this.curLast.get(i) || 0) < this.sessionT) this._heal(i, 0); }, 3000 + Math.random() * 1500);
+  }
   // Borra del broker los mensajes retenidos de la sesión anterior (privacidad).
   _cleanup(topics) {
     let i = 0;
@@ -329,8 +347,8 @@ export class MqttStore {
   async _announce(session, t) {
     if (!this.canWrite) return;
     const text = await signBody(this.priv, { session, t });
-    for (const c of this.clients) c.publish(this.base + 'current', text, { retain: true, sticky: true });
-    if (t > this.sessionT) this._switch(session, t);
+    for (const c of this.clients) c.publish(this.base + 'current', text, { retain: true });
+    if (t > this.sessionT) { this.currentText = text; this._switch(session, t); }
   }
 
   // ——— Publicación ———
