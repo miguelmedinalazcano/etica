@@ -21,7 +21,7 @@ document.body.classList.toggle('embed', EMBED);
 const studentUrl = (cfg.baseUrl || new URL('../', location.href).href).replace(/\/?$/, '/');
 
 // Qué vista corresponde a cada slide abierta desde la consola.
-const VIEW_BY_SLIDE = { 1: 'qr', 2: 'encuesta', 3: 'canales', 12: 'casos', 15: 'experimento', 17: 'anunciantes', 18: 'd5', 27: 'd_final' };
+const VIEW_BY_SLIDE = { 1: 'qr', 2: 'encuesta', 3: 'canales', 12: 'casos', 15: 'experimento', 17: 'anunciantes', 18: 'd5', 26: 'd_final' };
 const NEEDS = ['_presence', ...SURVEY_IDS, 'd2_casos', 'd5', 'd_final'];
 
 // ——— QR ———

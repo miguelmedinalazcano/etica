@@ -99,7 +99,7 @@ export const QUESTIONS = {
 
 export const SURVEY_IDS = ['q1_canal', 'q2_linea', 'q3_confianza', 'q4_preferencia', 'q5_anunciantes', 'q6_ideologia', 'q7_elpais', 'q8_elmundo', 'q9_abc', 'q10_eldiario'];
 
-// Qué ve el móvil en cada slide (numeración de la guía, 1–29).
+// Qué ve el móvil en cada slide (numeración de la guía sin «Equipo y presupuesto»: 1–28).
 export const SLIDES = [
   { n: 1, section: 'Apertura', title: 'La ética del periodismo', phone: { kind: 'welcome' }, t: 0, who: 'P1', script: ['Mientras entran: «Escanead el QR: hoy sois el consejo editorial».', 'Mira el contador de conectados. Cuando deje de subir, empieza.', 'Presenta al grupo y el tema en una frase.'], notes: [] },
   { n: 2, section: 'Apertura', title: 'Antes de empezar: ¿cómo os informáis?', phone: { kind: 'survey', qids: SURVEY_IDS, title: 'Encuesta y experimento' }, timer: 90, t: 60, who: 'P1', script: ['«Diez preguntas, 90 segundos, anónimo.» Quien hizo la pre-encuesta no repite.', 'Deja correr la cuenta atrás sin comentar nada.', 'Pasa cuando «han terminado» deje de subir.'], notes: [] },
@@ -125,11 +125,10 @@ export const SLIDES = [
   { n: 22, section: 'Propuesta', title: '¿Qué mide el índice de rigor?', phone: { kind: 'question', qid: 'r_criterios' }, timer: 30, t: 2025, who: 'P4', script: ['Cinco criterios. El ranking del móvil es opcional.', 'Siguiente ▶: «La IA propone, una persona dispone».'], notes: [] },
   { n: 23, section: 'Propuesta', title: 'AnuncIA en acción', phone: { kind: 'listen', lines: ['Medio E: el medio de esta clase', 'Su nota de rigor sale de vuestros votos en el debate 2'] }, t: 2070, who: 'P4', script: ['Medios ficticios. Medio D: máxima afinidad y fuera.', 'Siguiente ▶: aparece Medio E, el de la clase, con vuestra exigencia del debate 2. Comenta el resultado.'], notes: ['Atribuir notas inventadas a medios reales sería engañoso; por eso los medios son ficticios.'] },
   { n: 24, section: 'Propuesta', title: 'Las líneas rojas de AnuncIA', phone: { kind: 'listen', lines: ['Cortafuegos', 'Privacidad (art. 9 RGPD)', 'Publicidad institucional (EMFA art. 25)', 'Contra la polarización'] }, t: 2115, who: 'P4', script: ['Cuatro líneas rojas, una frase cada una.', 'Pasa el testigo a P2.'], notes: [] },
-  { n: 25, section: 'Implantación', title: 'Hoja de ruta de implantación', phone: { kind: 'listen', lines: ['Diseño → Piloto → Escalado → Revisión anual'] }, t: 2145, who: 'P2', script: ['Cuatro fases y un KPI por idea. 30 segundos.'], notes: [] },
-  { n: 26, section: 'Implantación', title: 'Equipo y presupuesto', phone: { kind: 'listen', lines: ['Piloto: 125.000 € (ficticio)'] }, t: 2175, who: 'P2', script: ['Equipo y presupuesto ficticio. 30 segundos.', 'Pasa el testigo a P3.'], notes: [] },
-  { n: 27, section: 'Debate final', title: '¿Usaríais AnuncIA si fuerais un medio y vuestra nota de rigor fuera pública?', phone: { kind: 'debate', qid: 'd_final' }, t: 2205, who: 'P3', script: ['Voto (30 s). Debate de 1,5 min con las dos preguntas.', 'Siguiente ▶: nuestra valoración, incentivos y riesgos.', 'Pasa el testigo a P1.'], notes: ['AnuncIA no se planteó en la entrevista: la valoración sale de nuestro análisis.'] },
-  { n: 28, section: 'Cierre', title: 'Lo que os lleváis de hoy', phone: { kind: 'survey', qids: ['t_tesis_post', 'q3_post'], title: 'Antes de irte' }, timer: 30, t: 2340, who: 'P1', script: ['«Dos toques en el móvil: la tesis y la confianza» (30 s).', 'Lee el pre/post: ¿ha cambiado la clase?', 'Siguiente ▶: la tesis final.'], notes: [] },
-  { n: 29, section: 'Cierre', title: 'Gracias', phone: { kind: 'thanks' }, t: 2385, who: 'P1', script: ['Gracias, preguntas y agradecimiento a COPE. El QR lleva a las fuentes.'], notes: [] },
+  { n: 25, section: 'Implantación', title: 'Hoja de ruta de implantación', phone: { kind: 'listen', lines: ['Diseño → Piloto → Escalado → Revisión anual'] }, t: 2145, who: 'P2', script: ['Cuatro fases y un KPI por idea. 50 segundos.', 'Pasa el testigo a P3.'], notes: [] },
+  { n: 26, section: 'Debate final', title: '¿Usaríais AnuncIA si fuerais un medio y vuestra nota de rigor fuera pública?', phone: { kind: 'debate', qid: 'd_final' }, t: 2205, who: 'P3', script: ['Voto (30 s). Debate de 1,5 min con las dos preguntas.', 'Siguiente ▶: nuestra valoración, incentivos y riesgos.', 'Pasa el testigo a P1.'], notes: ['AnuncIA no se planteó en la entrevista: la valoración sale de nuestro análisis.'] },
+  { n: 27, section: 'Cierre', title: 'Lo que os lleváis de hoy', phone: { kind: 'survey', qids: ['t_tesis_post', 'q3_post'], title: 'Antes de irte' }, timer: 30, t: 2340, who: 'P1', script: ['«Dos toques en el móvil: la tesis y la confianza» (30 s).', 'Lee el pre/post: ¿ha cambiado la clase?', 'Siguiente ▶: la tesis final.'], notes: [] },
+  { n: 28, section: 'Cierre', title: 'Gracias', phone: { kind: 'thanks' }, t: 2385, who: 'P1', script: ['Gracias, preguntas y agradecimiento a COPE. El QR lleva a las fuentes.'], notes: [] },
 ];
 
 export const CUES = { welcome: 'Escanea el QR', survey: 'Responde en el móvil', question: 'Responde en el móvil', debate: 'Vota y escribe en el muro', compare: 'Mira tu móvil' };
@@ -137,7 +136,7 @@ export const PRESENTERS = { P1: 'Ponente 1', P2: 'Ponente 2', P3: 'Ponente 3', P
 export const TOTAL_SECONDS = 2400;
 
 // ——— Modo guía (APP_CONFIG.strict): solo las interacciones que pide Guia_Diseno_Presentacion.md ———
-// Votaciones: encuesta y experimento (2), casos A–D (12), votación de tres opciones (18 y 27).
+// Votaciones: encuesta y experimento (2), casos A–D (12), votación de tres opciones (18 y 26).
 // Resultados en pantalla: 3, 15 y 17. Nada más: sin roles, muro, reacciones ni micro-preguntas.
 const STRICT_PHONE = {
   4: { kind: 'listen', lines: ['33 % de los españoles confía en las noticias', '70 % cree que influyen gobiernos y partidos', 'Fuente: Digital News Report España 2026'] },
@@ -151,10 +150,10 @@ const STRICT_PHONE = {
   16: { kind: 'listen', lines: ['¿Existe la neutralidad periodística?', '¿Cómo puede un medio ganarse la confianza de quien no comparte su línea?'] },
   18: { kind: 'question', qid: 'd5' },
   22: { kind: 'listen', lines: ['Cinco criterios del índice de rigor', '«La IA propone, una persona dispone.»'] },
-  27: { kind: 'question', qid: 'd_final' },
-  28: { kind: 'listen', lines: ['«La línea editorial se puede vender. El rigor, no.»'] },
+  26: { kind: 'question', qid: 'd_final' },
+  27: { kind: 'listen', lines: ['«La línea editorial se puede vender. El rigor, no.»'] },
 };
-const STRICT_TIMER = { 2: 90, 12: 45, 18: 30, 27: 30 };
+const STRICT_TIMER = { 2: 90, 12: 45, 18: 30, 26: 30 };
 const STRICT_SCRIPT = {
   1: ['Mientras entran: «Escanead el QR para la encuesta del principio».', 'Presenta al grupo y el tema en una frase.'],
   4: ['Tres cifras grandes del DNR 2026: 33 %, 70 % y 65 / 55 %.', 'Cita la fuente.'],
@@ -168,8 +167,8 @@ const STRICT_SCRIPT = {
   16: ['Lanza las dos preguntas del debate (2 min).', 'Siguiente ▶: la voz de COPE.', 'Pasa el testigo a P4.'],
   18: ['Votación de tres opciones (30 s). Comenta el reparto.', 'Lanza las dos preguntas del debate (2 min).', 'Siguiente ▶: la voz de COPE.'],
   22: ['Cinco criterios.', '«La IA propone, una persona dispone.»'],
-  27: ['Votación de tres opciones (30 s).', 'Lanza las dos preguntas del debate.', 'Después: nuestra valoración, incentivos y riesgos.', 'Pasa el testigo a P1.'],
-  28: ['Una conclusión por idea.', 'Cierra con la frase final.'],
+  26: ['Votación de tres opciones (30 s).', 'Lanza las dos preguntas del debate.', 'Después: nuestra valoración, incentivos y riesgos.', 'Pasa el testigo a P1.'],
+  27: ['Una conclusión por idea.', 'Cierra con la frase final.'],
 };
 export const STRICT = !!globalThis.APP_CONFIG?.strict;
 if (STRICT) {
